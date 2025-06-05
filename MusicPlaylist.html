@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pro Music Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+
+  <style>
+    :root {
+      --bg: #121212;
+      --fg: #fff;
+      --accent: #00eaff;
+      --card: #1f1f1f;
+      --hover: #00eaff40;
+      --active: #00eaff80;
+    }
+
+    body.light {
+      --bg: #f4f4f4;
+      --fg: #000;
+      --accent: #007acc;
+      --card: #ffffff;
+      --hover: #007acc20;
+      --active: #007acc60;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .player {
+      background: var(--card);
+      padding: 25px;
+      border-radius: 20px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 0 20px var(--accent);
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+
+    .lyrics {
+      font-size: 13px;
+      text-align: center;
+      color: #aaa;
+      margin-bottom: 12px;
+    }
+
+    .cover {
+      display: block;
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin: 0 auto 20px;
+      box-shadow: 0 0 15px var(--accent);
+    }
+
+    .progress-container {
+      height: 6px;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 10px 0;
+      cursor: pointer;
+    }
+
+    .progress {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+    }
+
+    .timer {
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      color: #bbb;
+      margin-top: 2px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin: 15px 0;
+    }
+
+    .controls button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 22px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .controls button:hover {
+      transform: scale(1.2);
+    }
+
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .volume-control input {
+      width: 100px;
+    }
+
+    .song-list h4 {
+      font-size: 14px;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+
+    .song-list ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .song-list li {
+      padding: 6px 10px;
+      margin: 4px 0;
+      background: #2a2a2a;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .song-list li:hover {
+      background: var(--hover);
+    }
+
+    .active {
+      background: var(--active);
+      font-weight: bold;
+    }
+
+    .extras {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 500px) {
+      .controls button {
+        font-size: 18px;
+      }
+
+      .volume-control input {
+        width: 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="player">
+    <div class="extras">
+      <button onclick="toggleTheme()">🌓</button>
+      <div>
+        <button onclick="downloadSong()">⬇️</button>
+        <button onclick="shareSong()">📤</button>
+      </div>
+    </div>
+    <div class="title" id="songTitle">Loading...</div>
+    <div class="lyrics" id="songLyrics">Lyrics will appear here</div>
+    <img class="cover" id="coverImage" src="https://i.imgur.com/5A3FQyG.jpg" alt="Cover Art" />
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress" id="progressBar"></div>
+    </div>
+    <div class="timer">
+      <span id="currentTime">0:00</span>
+      <span id="duration">0:00</span>
+    </div>
+
+    <audio id="audio"></audio>
+
+    <div class="controls">
+      <button onclick="prevSong()">⏮️</button>
+      <button onclick="toggleShuffle()">🔀</button>
+      <button onclick="togglePlay()" id="playPauseBtn">▶️</button>
+      <button onclick="toggleRepeat()">🔁</button>
+      <button onclick="nextSong()">⏭️</button>
+    </div>
+
+    <div class="volume-control">
+      <span>🔊</span>
+      <input type="range" id="volumeSlider" min="0" max="1" step="0.01" />
+    </div>
+
+    <div class="song-list">
+      <h4>🎵 Playlist</h4>
+      <ul id="playlist"></ul>
+    </div>
+  </div>
+
+  <script>
+    const audio = document.getElementById('audio');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressContainer = document.getElementById('progressContainer');
+    const songTitle = document.getElementById('songTitle');
+    const songLyrics = document.getElementById('songLyrics');
+    const coverImage = document.getElementById('coverImage');
+    const playlistEl = document.getElementById('playlist');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+
+    let isPlaying = false, isShuffle = false, isRepeat = false, currentSongIndex = 0;
+
+    const songs = [
+      {
+        title: "Lucid Dreams",
+        file: "lucid.mp3",
+        lyrics: "I have these lucid dreams...\nWhere I can't move a thing",
+        cover: "https://i.imgur.com/5A3FQyG.jpg"
+      },
+      {
+        title: "Night Drive",
+        file: "night.mp3",
+        lyrics: "Cruising through the neon lights...\nOn a quiet midnight ride",
+        cover: "https://i.imgur.com/9d0Y9tD.jpg"
+      },
+      {
+        title: "Skyline View",
+        file: "skyline.mp3",
+        lyrics: "Stars above the cityscape...\nEverything feels right",
+        cover: "https://i.imgur.com/3nAEdlA.jpg"
+      }
+    ];
+
+    function loadSong(index) {
+      const song = songs[index];
+      audio.src = song.file;
+      songTitle.textContent = song.title;
+      songLyrics.innerHTML = song.lyrics.replace(/\n/g, "<br>");
+      coverImage.src = song.cover;
+      highlightPlaylist(index);
+    }
+
+    function togglePlay() {
+      if (isPlaying) {
+        audio.pause();
+        playPauseBtn.textContent = '▶️';
+      } else {
+        audio.play();
+        playPauseBtn.textContent = '⏸️';
+      }
+      isPlaying = !isPlaying;
+    }
+
+    function prevSong() {
+      currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
+      loadSong(currentSongIndex);
+      if (isPlaying) audio.play();
+    }
+
+    function nextSong() {
+      currentSongIndex = isShuffle ? Math.floor(Math.random() * songs.length) : (currentSongIndex + 1) % songs.length;
+      loadSong(currentSongIndex);
+      if (isPlaying) audio.play();
+    }
+
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      alert("Shuffle is now " + (isShuffle ? "ON" : "OFF"));
+    }
+
+    function toggleRepeat() {
+      isRepeat = !isRepeat;
+      audio.loop = isRepeat;
+      alert("Repeat is now " + (isRepeat ? "ON" : "OFF"));
+    }
+
+    function updateProgress() {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progressBar.style.width = percent + '%';
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+      durationEl.textContent = formatTime(audio.duration);
+    }
+
+    function formatTime(time) {
+      const mins = Math.floor(time / 60) || 0;
+      const secs = Math.floor(time % 60) || 0;
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    function setProgress(e) {
+      const width = progressContainer.clientWidth;
+      const clickX = e.offsetX;
+      audio.currentTime = (clickX / width) * audio.duration;
+    }
+
+    function renderPlaylist() {
+      songs.forEach((song, i) => {
+        const li = document.createElement('li');
+        li.textContent = song.title;
+        li.onclick = () => {
+          currentSongIndex = i;
+          loadSong(i);
+          if (isPlaying) audio.play();
+        };
+        playlistEl.appendChild(li);
+      });
+    }
+
+    function highlightPlaylist(index) {
+      document.querySelectorAll('#playlist li').forEach((li, i) => {
+        li.classList.toggle('active', i === index);
+      });
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('light');
+    }
+
+    function downloadSong() {
+      const link = document.createElement('a');
+      link.href = songs[currentSongIndex].file;
+      link.download = songs[currentSongIndex].title + '.mp3';
+      link.click();
+    }
+
+    function shareSong() {
+      if (navigator.share) {
+        navigator.share({
+          title: songs[currentSongIndex].title,
+          text: 'Check out this song!',
+          url: songs[currentSongIndex].file
+        });
+      } else {
+        alert('Sharing not supported in this browser.');
+      }
+    }
+
+    // Init
+    renderPlaylist();
+    loadSong(currentSongIndex);
+    audio.volume = 0.7;
+    volumeSlider.value = 0.7;
+
+    // Events
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', () => { if (!isRepeat) nextSong(); });
+    progressContainer.addEventListener('click', setProgress);
+    volumeSlider.addEventListener('input', () => { audio.volume = volumeSlider.value; });
+  </script>
+</body>
+</html>
